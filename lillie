@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+
+require 'bundler'
+Bundler.require(:default)
+
+module RedditKit
+  class Client
+    def middleware
+      @middleware ||= Faraday::Builder.new do |builder|
+        builder.use Faraday::Request::UrlEncoded
+        builder.use RedditKit::Response::RaiseError
+        builder.use RedditKit::Response::ParseJSON
+        builder.use FaradayMiddleware::FollowRedirects
+        builder.adapter :net_http
+      end
+    end
+  end
+end
+
+module RedditKit
+  class Comment
+    def score
+      attributes[:ups] - attributes[:downs]
+    end
+  end
+end
+
+def interesting(client)
+  client.links('videos').results.select do |r|
+    b = true
+    b &&= r.num_comments < 70
+    b &&= !r.sticky?
+    b &&= r.url =~ %r{https?://(www.)?youtu\.?be}
+    b
+  end
+end
+
+def submitted(client, result)
+  # Let's just remove all kinds of annotation shit and what not.
+  id   = result.url.match(%r{(?<=v=|/)[-_A-Z0-9]{11}}i).to_s
+  url  = "http://youtube.com/watch?v=#{ id }"
+
+  binding.pry if id == ''
+
+  prev = client.search(url)
+  prev.select do |r|
+    return false unless r
+    r.permalink != result.permalink
+    r.num_comments > 200
+  end.sort_by(&:num_comments).reverse.take(5) if prev
+end
+
+def leak_karma(client, rs)
+  rs.map do |r|
+    cs = client.comments(r)
+    if cs.count > 20 # TOP_COMMENT_OF_YORE might interfere.
+      cs.drop(1)
+    else
+      cs
+    end
+  end.
+    flatten.compact.
+    sort_by(&:score).reverse.
+    first(5).
+    sort_by { |c| c.replies.count }.reverse. # Fishing for the punniest threads.
+    first
+end
+
+def think(client, posts, oldies)
+  posts.zip(oldies).map do |(p, oldlinks)|
+    if oldlinks && oldlinks.count
+      oldpost = leak_karma(client, oldlinks)
+      if oldpost
+        [p, oldpost, oldies]
+      end
+    end
+  end.compact
+end
+
+def write?(id)
+  fn  = 'usage-log'
+  l   = File.exists?(fn) && File.read(fn) || ''
+  ids = l.split(',')
+  !ids.index(id)
+ensure
+  ids << id
+  ids.uniq!
+  File.open(fn, 'w') do |f|
+    f.write(ids.join(','))
+  end
+end
+
+def submit(client, p, c)
+  client.submit_comment(p, c.body)
+end
+
+def main(credentials)
+  client  = RedditKit::Client.new *credentials
+  posts   = interesting(client)
+  oldies  = posts.map do |p| submitted(client, p) end
+  actions = think(client, posts, oldies)
+
+  actions.each do |(p, c, o)|
+    next unless write?(p.id)
+    submit(client, p, c)
+
+    if ENV["VERBOSE"]
+      puts("#{ p.permalink } and #{ o.count } stuffs for it. Comment:" + indent(c.body))
+    else
+      puts "#{%x{ date }} | Submitting for #{ p.id }"
+    end
+  end
+end
+
+def indent(stuff)
+  ['', *stuff.split("\n")].join("\n  ")
+end
+
+main(ARGV.first(2))
