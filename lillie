@@ -56,7 +56,8 @@ def submitted(client, result)
 
   binding.pry if id == ''
   begin
-    client.search(url).select do |r|
+    prev = client.search(url)
+    prev.select do |r|
       return false unless r
       r.permalink != result.permalink
       r.num_comments > 200
@@ -79,8 +80,12 @@ def leak_karma(client, rs)
     flatten.compact.
     sort_by(&:score).reverse.
     first(5).
-    sort_by { |c| c.replies.count }.reverse. # Fishing for the punniest threads.
+    tap { binding.pry }.
+    sort_by { |c| c.inspect.length }.reverse. # *1
     first
+
+  # 1 - Fishing for the punniest threads. Inspect does recursion,
+  #     so the .inspect.length should =~ c * repliesAndSubreplies
 end
 
 def think(client, posts, oldies)
