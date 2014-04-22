@@ -25,12 +25,27 @@ module RedditKit
   end
 end
 
+# Should I write a comment about this ID?
+def write?(id)
+  fn  = 'usage-log'
+  l   = File.exists?(fn) && File.read(fn) || ''
+  ids = l.split(',')
+  !ids.index(id)
+ensure
+  ids << id
+  ids.uniq!
+  File.open(fn, 'w') do |f|
+    f.write(ids.join(','))
+  end
+end
+
 def interesting(client)
   client.links('videos').results.select do |r|
     b = true
     b &&= r.num_comments < 70
     b &&= !r.sticky?
     b &&= r.url =~ %r{https?://(www.)?youtu\.?be}
+    b &&= write?(r.id)
     b
   end
 end
@@ -77,19 +92,6 @@ def think(client, posts, oldies)
   end.compact
 end
 
-def write?(id)
-  fn  = 'usage-log'
-  l   = File.exists?(fn) && File.read(fn) || ''
-  ids = l.split(',')
-  !ids.index(id)
-ensure
-  ids << id
-  ids.uniq!
-  File.open(fn, 'w') do |f|
-    f.write(ids.join(','))
-  end
-end
-
 def submit(client, p, c)
   client.submit_comment(p, c.body)
 end
@@ -101,7 +103,6 @@ def main(credentials)
   actions = think(client, posts, oldies)
 
   actions.each do |(p, c, o)|
-    next unless write?(p.id)
     submit(client, p, c)
 
     if ENV["VERBOSE"]
