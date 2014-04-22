@@ -51,14 +51,11 @@ def interesting(client)
 end
 
 def submitted(client, result)
-  # Let's just remove all kinds of annotation shit and what not.
   id   = result.url.match(%r{(?<=v=|/)[-_A-Z0-9]{11}}i).to_s
   url  = "http://youtube.com/watch?v=#{ id }"
 
   binding.pry if id == ''
-
-  prev = client.search(url)
-  prev.select do |r|
+  client.search(url).select do |r|
     return false unless r
     r.permalink != result.permalink
     r.num_comments > 200
@@ -96,25 +93,25 @@ def submit(client, p, c)
   client.submit_comment(p, c.body)
 end
 
+def log((p, c, o))
+  def indent(stuff)
+    ['', *stuff.split("\n")].join("\n  ")
+  end
+
+  if ENV["VERBOSE"]
+    puts("#{ p.permalink } and #{ o.count } stuffs for it. Comment:" + indent(c.body))
+  else
+    puts "#{%x{ date }} | Submitting for #{ p.id }"
+  end
+end
+
 def main(credentials)
   client  = RedditKit::Client.new *credentials
   posts   = interesting(client)
   oldies  = posts.map do |p| submitted(client, p) end
   actions = think(client, posts, oldies)
 
-  actions.each do |(p, c, o)|
-    submit(client, p, c)
-
-    if ENV["VERBOSE"]
-      puts("#{ p.permalink } and #{ o.count } stuffs for it. Comment:" + indent(c.body))
-    else
-      puts "#{%x{ date }} | Submitting for #{ p.id }"
-    end
-  end
-end
-
-def indent(stuff)
-  ['', *stuff.split("\n")].join("\n  ")
+  actions.each do |(p, c, o)| submit(client, p, c) end.each(&method(:log))
 end
 
 main(ARGV.first(2))
