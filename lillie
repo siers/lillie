@@ -47,7 +47,7 @@ def interesting(client)
     b = true
     b &&= r.num_comments < 70
     b &&= !r.sticky?
-    b &&= r.url =~ %r{https?://(www.)?youtu\.?be}
+    b &&= r.url =~ %r{https?://[^/]+youtu\.?be}
     b
   end
 end
