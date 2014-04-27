@@ -48,7 +48,6 @@ def interesting(client)
     b &&= r.num_comments < 70
     b &&= !r.sticky?
     b &&= r.url =~ %r{https?://(www.)?youtu\.?be}
-    b &&= write?(r.id)
     b
   end
 end
@@ -121,6 +120,8 @@ end
 def main(credentials)
   client  = RedditKit::Client.new *credentials
   posts   = interesting(client)
+  write?("| #{ rand }\n") if posts.any?
+  posts   = posts.select(&method(:write?))
   oldies  = posts.map do |p| submitted(client, p) end
   actions = think(client, posts, oldies)
 
