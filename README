@@ -1,0 +1,24 @@
+- lillie, a machine that gives old comments their second coming
+    This is something I wrote at an evening and will never maintain.
+    Reaps karma and wastes reddit servers' time.
+    I'm still a little proud of it.
+
+- a rather technical blueprint in pseudo-haskell
+    findNewFrontpagePosts >>= (\post ->
+      zip post (findResubmittableContent post)
+    ) >>= filter seenPost >>= post
+
+    That about sums it up.
+
+- requirements
+    redditkit.rb, ruby
+
+- issues
+    It doesn't typecheck, because ruby has no types.
+    It doesn't have tests, because it would be a large bitch to test...
+    Its repost search goodness criteria is too high.
+    It doesn't use the latest redditkit.rb(probably)
+
+- usage
+    #<s>./lillie user password</s>
+    echo Please don't use it, it will make reddit cancer.
