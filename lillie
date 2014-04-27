@@ -26,17 +26,20 @@ module RedditKit
 end
 
 # Should I write a comment about this ID?
-def write?(id)
+def write?(p)
+  id  = (p.respond_to? :id) ? p.id : p
   fn  = 'usage-log'
   l   = File.exists?(fn) && File.read(fn) || ''
   ids = l.split(',')
-  !ids.index(id)
-ensure
+  ret = !ids.index(id)
+
   ids << id
   ids.uniq!
   File.open(fn, 'w') do |f|
     f.write(ids.join(','))
   end
+
+  ret
 end
 
 def interesting(client)
