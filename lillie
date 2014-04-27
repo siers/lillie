@@ -81,7 +81,6 @@ def leak_karma(client, rs)
     flatten.compact.
     sort_by(&:score).reverse.
     first(5).
-    tap { binding.pry }.
     sort_by { |c| c.inspect.length }.reverse. # *1
     first
 
@@ -124,7 +123,10 @@ def main(credentials)
   oldies  = posts.map do |p| submitted(client, p) end
   actions = think(client, posts, oldies)
 
+  puts "posts  = #{ posts.count }"
+  puts "oldies = #{ oldies.map { |o| o && o.length } }"
   actions.each do |(p, c, o)| submit(client, p, c) end.each(&method(:log))
 end
 
+raise unless ARGV.length == 2
 main(ARGV.first(2))
