@@ -45,7 +45,7 @@ end
 def interesting(client)
   client.links('videos').results.select do |r|
     b = true
-    b &&= r.num_comments < 70
+    b &&= r.num_comments < 100
     b &&= !r.sticky?
     b &&= r.url =~ %r{https?://[^/]+youtu\.?be}
     b
