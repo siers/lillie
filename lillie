@@ -4,6 +4,8 @@
 require 'bundler'
 Bundler.require(:default)
 
+require 'active_support/core_ext'
+
 module RedditKit
   class Client
     def middleware
@@ -48,25 +50,42 @@ def interesting(client)
     b = true
     b &&= r.num_comments < 100
     b &&= !r.sticky?
-    b &&= r.url =~ %r{https?://[^/]+youtu\.?be}
     b
   end
 end
 
-def submitted(client, result)
-  id   = result.url.match(%r{(?<=v=|/)[-_A-Z0-9]{11}}i).to_s
-  url  = "http://youtube.com/watch?v=#{ id }"
+def tryit(callback, exp = Exception, &block)
+  safety = proc do
+    begin
+      return block.call
+    rescue exp
+      retry if _r = (_r || 0) + 1 and _r < 4
+      raise
+    end
+  end
 
-  binding.pry if id == ''
-  begin
-    prev = client.search(url)
-    prev.select do |r|
-      next nil unless r
-      r.permalink != result.permalink && r.num_comments > 90
-    end.sort_by(&:num_comments).reverse.take(5) if prev
-  rescue Errno::ETIMEDOUT
-    retry if _r = (_r || 0) + 1 and _r < 4
-    raise
+  callback.each(&safety)
+end
+
+def submitted(client, result)
+  url = result.url
+  if result.url =~ %r{https?://[^/]+youtu\.?be}
+    id     = result.url.match(%r{(?<=v=|/)[-_A-Z0-9]{11}}i).to_s
+    alturl = "http://youtube.com/watch?v=#{ id }"
+  end
+
+  tryit 3.times, Errno::ETIMEDOUT do
+    urls  = []
+    urls << client.search(url)
+    urls << client.search(alturl) if alturl && url != alturl
+    urls.
+      compact.
+      map { |paginated_response| paginated_response.each.to_a }.
+      flatten.
+      compact.
+      select do |r|
+        r.permalink != result.permalink && r.num_comments > 90
+      end.sort_by(&:num_comments).reverse.take(5).presence
   end
 end
 
