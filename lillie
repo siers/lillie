@@ -84,7 +84,7 @@ def submitted(client, result)
       flatten.
       compact.
       select do |r|
-        r.permalink != result.permalink && r.num_comments > 90
+        r.permalink != result.permalink && r.num_comments > 200
       end.sort_by(&:num_comments).reverse.take(5).presence
   end
 end
