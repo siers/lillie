@@ -110,9 +110,8 @@ end
 
 def think(client, posts, oldies)
   posts.zip(oldies).map do |(p, oldlinks)|
-    if oldlinks && oldlinks.count
-      oldpost = leak_karma(client, oldlinks)
-      if oldpost
+    if oldlinks.try { |ol| ol.count > 0 }
+      leak_karma(client, oldlinks).try do |oldpost|
         [p, oldpost, oldies]
       end
     end
