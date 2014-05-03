@@ -132,7 +132,7 @@ def log((p, c, o))
   if ENV["VERBOSE"]
     puts("#{ p.permalink } and #{ o.count } stuffs for it. Comment:" + indent(c.body))
   else
-    puts "#{%x{ date }} | Submitting for #{ p.id }"
+    puts "#{%x{ date }.chomp} | Submitting for #{ p.id }"
   end
 end
 
