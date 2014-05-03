@@ -67,17 +67,25 @@ def tryit(callback, exp = Exception, &block)
   callback.each(&safety)
 end
 
+def search(client, q)
+  urls = client.search(q)
+ensure
+  puts "Found #{ urls.count } urls from #{ q }." if ENV["VERBOSE"]
+end
+
 def submitted(client, result)
   url = result.url
-  if result.url =~ %r{https?://[^/]+youtu\.?be}
+  id  = nil
+  if result.url =~ %r{https?://[^/]*youtu\.?be}
     id     = result.url.match(%r{(?<=v=|/)[-_A-Z0-9]{11}}i).to_s
     alturl = "http://youtube.com/watch?v=#{ id }"
   end
 
   tryit 3.times, Errno::ETIMEDOUT do
     urls  = []
-    urls << client.search(url)
-    urls << client.search(alturl) if alturl && url != alturl
+    urls << search(client, url)
+    urls << search(client, "url:#{ id }") if id
+    urls << search(client, alturl)        if alturl && url != alturl
     urls.
       compact.
       map { |paginated_response| paginated_response.each.to_a }.
