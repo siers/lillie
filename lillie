@@ -98,7 +98,9 @@ def leak_karma(client, rs)
       cs
     end
   end.
-    flatten.compact.
+    flatten.compact.select do |comment|
+      comment.body.strip != ''
+    end.
     sort_by(&:score).reverse.
     first(5).
     sort_by { |c| c.inspect.length }.reverse. # *1
