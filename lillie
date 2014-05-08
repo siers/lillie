@@ -70,7 +70,7 @@ end
 def search(client, q)
   urls = client.search(q)
 ensure
-  puts "Found #{ urls.count } urls from #{ q }." if ENV["VERBOSE"]
+  puts "Found #{ urls.try(:count) } urls from #{ q }." if ENV["VERBOSE"]
 end
 
 def submitted(client, result)
